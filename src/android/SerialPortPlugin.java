@@ -29,10 +29,8 @@ public class SerialPortPlugin extends CordovaPlugin {
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         if (action.equals("openSerialPort")) {
-            String devName = args.getString(0);
-            int baudrate = Integer.paseInt(args.getString(1));
-            int flags = Integer.paseInt(args.getString(2));
-            this.openSerialPort(devName, baudrate, flags, callbackContext);
+            String message = args.getString(0);
+            this.openSerialPort(message, callbackContext);
             return true;
         }
         else if (action.equals("writeSerialData")) {
@@ -52,9 +50,45 @@ public class SerialPortPlugin extends CordovaPlugin {
         return false;
     }
 
-    private void openSerialPort(String devName, int baudrate, int flags, CallbackContext callbackContext) {
+    private void openSerialPort(String message, CallbackContext callbackContext) {
+        JSONArray jsonArray = null;
+        JSONObject arg = null;
+        String devName = null;
+        int baudrate = 0;
+        int flags = 0;
         if (message != null && message.length() > 0) {
             try {
+                try {
+                    jsonArray = new JSONArray(message);
+                }
+                catch(Exception e){
+                    System.out.println("Wrong!");
+                }
+                try {
+                    arg = jsonArray.getJSONObject(0);
+                }
+                catch(Exception e){
+                    System.out.println("Wrong!");
+                }
+                try {
+                    devName = arg.getString("dev");
+                }
+                catch(Exception e){
+                    System.out.println("Wrong!");
+                }
+                try {
+                    baudrate =  arg.getInt("baudrate");
+                }
+                catch(Exception e){
+                    System.out.println("Wrong!");
+                }
+                try {
+                    flags = arg.getInt("flags");
+                }
+                catch(Exception e){
+                    System.out.println("Wrong!");
+                }
+
                 serialPort = new SerialPort(new File(devName), baudrate, flags);
                 inputStream = serialPort.getInputStream();
                 outputStream = serialPort.getOutputStream();
@@ -65,6 +99,7 @@ public class SerialPortPlugin extends CordovaPlugin {
             callbackContext.error("无法打开串口");
         }
     }
+
     private void writeSerialData(String message, CallbackContext callbackContext) {
         if (message != null && message.length() > 0) {
             try {
@@ -78,6 +113,7 @@ public class SerialPortPlugin extends CordovaPlugin {
             callbackContext.error("无法写入串口数据");
         }
     }
+
     private void readSerialData(CallbackContext callbackContext) {
         byte[] byteArray = new byte[1024];
             try {
@@ -87,6 +123,7 @@ public class SerialPortPlugin extends CordovaPlugin {
                 e.printStackTrace();
         }
     }
+
     private void closeSerialPort(CallbackContext callbackContext) {
             try {
                 serialPort.close();
