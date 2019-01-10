@@ -43,6 +43,11 @@ public class SerialPortPlugin extends CordovaPlugin {
             this.readSerialData(callbackContext);
             return true;
         }
+        else if (action.equals("sendDataAndWaitResponse")) {
+            String message = args.getString(0);
+            this.sendDataAndWaitResponse(message, callbackContext);
+            return true;
+        }
         else if (action.equals("closeSerialPort")) {
             this.closeSerialPort(callbackContext);
             return true;
@@ -122,6 +127,34 @@ public class SerialPortPlugin extends CordovaPlugin {
             callbackContext.error("null");
         }else {
             callbackContext.success(data);
+        }
+    }
+
+    private void sendDataAndWaitResponse(String message, CallbackContext callbackContext) {
+        if (message != null && message.length() > 0) {
+            try {
+                byte[] byteArray =FormatUtil.hexString2Bytes(message);
+                outputStream.write(byteArray);
+                String data = readThread.getData();
+                int i = 0;
+                while(data == null && i < 50) { // 1s超时退出，否则会卡死
+                    try {
+                        Thread.sleep(20);
+                    } catch(Exception e) {
+                    }
+                    i++;
+                    data = readThread.getData();
+                }
+                if(data == null) {
+                    callbackContext.error("读取数据超时");
+                } else {
+                    callbackContext.success(data);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else {
+            callbackContext.error("无法写入串口数据");
         }
     }
 
