@@ -25,7 +25,7 @@ public class SerialPortPlugin extends CordovaPlugin {
     private SerialPort serialPort;
     private InputStream inputStream;
     private OutputStream outputStream;
-    ReadDataThread readThread;
+    private ReadDataThread readThread;
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -106,35 +106,23 @@ public class SerialPortPlugin extends CordovaPlugin {
     private void writeSerialData(String message, CallbackContext callbackContext) {
         if (message != null && message.length() > 0) {
             try {
-                // byte[] byteArray = message.getBytes();
-                byte[] byteArray = hexString2Bytes(message);
+                byte[] byteArray =FormatUtil.hexString2Bytes(message);
                 outputStream.write(byteArray);
-                System.out.println("write:"+ byteArray);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            //callbackContext.success("write:" + message);
         } else {
             callbackContext.error("无法写入串口数据");
         }
     }
 
     private void readSerialData(CallbackContext callbackContext) {
- /*       byte[] byteArray = new byte[1024];
-            try {
-                inputStream.read(byteArray);
-                System.out.println("read:"+ byteArray+ "str:" + new String(byteArray));
-                //callbackContext.success(new String(byteArray));
-            } catch (IOException e) {
-                e.printStackTrace();
-        }*/
         String data = readThread.getData();
         if(data == null){
             callbackContext.error("null");
         }else {
             callbackContext.success(data);
         }
-        //System.out.println("---read:"+ readThread.getData());
     }
 
     private void closeSerialPort(CallbackContext callbackContext) {
@@ -146,32 +134,16 @@ public class SerialPortPlugin extends CordovaPlugin {
         }
     }
 
-    private static byte[] hexString2Bytes(String str) {
-        if(str == null || str.trim().equals("")) {
-            return new byte[0];
-        }
-
-        byte[] bytes = new byte[str.length() / 2];
-        for(int i = 0; i < str.length() / 2; i++) {
-            String subStr = str.substring(i * 2, i * 2 + 2);
-            bytes[i] = (byte) Integer.parseInt(subStr, 16);
-        }
-
-        return bytes;
-    }
-
-
 }
 
 class ReadDataThread implements Runnable {
    private Thread t;
    private String threadName;
-   byte[] byteArray = new byte[1024];
-   InputStream input;
-   int readLen = 0;
-   String readData;
-    private  Lock lock=new ReentrantLock();
-
+   private byte[] byteArray = new byte[1024];
+   private InputStream input;
+   private int readLen = 0;
+   private String readData;
+   private  Lock lock=new ReentrantLock();
 
    ReadDataThread( String name, InputStream inputStream) {
       threadName = name;
@@ -185,14 +157,14 @@ class ReadDataThread implements Runnable {
         try {
                 readLen = input.read(byteArray);
                 if(readLen >= 4) { //协议帧太长一次读不完，数据包长度放在第三四字节
-                    int len = (int)ByteArrayToInt(byteArray,2,2,true); // 获取协议帧数据包长度
+                    int len = (int)FormatUtil.ByteArrayToInt(byteArray,2,2,true); // 获取协议帧数据包长度
                     if(readLen < (len + 7)) { //len+7为协议帧长度
                         readLen += input.read(byteArray, readLen, 1024 - readLen);
                     }
 
                     lock.lock();
                     if(readLen > 0) {
-                        readData =  bytes2HexString(byteArray, readLen);
+                        readData =  FormatUtil.bytes2HexString(byteArray, readLen);
                     }
                     lock.unlock();
                     System.out.println("readstr:" + readData);
@@ -222,55 +194,5 @@ class ReadDataThread implements Runnable {
          t.start ();
       }
    }
-
-    public static String bytes2HexString(byte[] bytes) {
-        StringBuilder buf = new StringBuilder(bytes.length * 2);
-        for(byte b : bytes) { // 使用String的format方法进行转换
-            buf.append(String.format("%02x", new Integer(b & 0xff)));
-        }
-
-        return buf.toString();
-    }
-
-    private static String bytes2HexString(byte[] bytes, int len) {
-        StringBuilder buf = new StringBuilder(len);
-        int i = 0;
-        for(byte b : bytes) { // 使用String的format方法进行转换
-            i++;
-            if(i > len) {
-                break;
-            }
-            buf.append(String.format("%02x", new Integer(b & 0xff)));
-        }
-
-        return buf.toString();
-    }
-
-    /**
-     *
-     * @param bRefArr
-     * @param offset
-     * @param len
-     * @param reverse false:低字节
-     * @return
-     */
-    private int ByteArrayToInt(byte[] bRefArr,int offset,int len, boolean reverse){
-        int iOutcome = 0;
-        byte bLoop;
-
-        if(reverse){
-	        for (int i = 0; i < len; i++) {
-	            bLoop = bRefArr[len+offset-i-1];
-	            iOutcome += (bLoop & 0xFF) << (8 * i);
-	        }
-        }
-        else{ //低字节
-            for (int i = 0; i < len; i++) {
-                bLoop = bRefArr[offset+i];
-                iOutcome += (bLoop & 0xFF) << (8 * i);
-            }
-        }
-        return iOutcome;
-    }
 
 }
