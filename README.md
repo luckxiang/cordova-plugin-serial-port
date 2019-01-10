@@ -7,10 +7,9 @@ ionic3 基于cordova编写的安卓串口通信插件  ionic3 serial port plugin
  3. write serial data and wait response 
 
 # how to use
-1. mv libs to platforms/android
-2. add the plugins to your project
-3. change the read protocol in ReadDataThread class
-4. then you can use HEX string to send or recive frame data.
+1. add the plugins to your project 'ionic cordova plugins add ./cordova-plugin-serial-port'
+2. change the read protocol in ReadDataThread class
+3. then you can use HEX string to send or recive frame data.
 
 # ts example: 
 ```
@@ -142,3 +141,4 @@ export class RunControl {
 }
 
 ```
+see more:[ionic3使用cordova创建安卓串口通信插件](http://bigxiangbaobao.com/blog/2018/07/25/ionic3%E4%BD%BF%E7%94%A8cordova%E5%88%9B%E5%BB%BA%E5%AE%89%E5%8D%93%E4%B8%B2%E5%8F%A3%E9%80%9A%E4%BF%A1%E6%8F%92%E4%BB%B6/)
