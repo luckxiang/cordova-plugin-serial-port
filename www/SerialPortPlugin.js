@@ -13,7 +13,7 @@ var SerialPort = {
         exec(success, error, "SerialPortPlugin", "writeSerialData", [data]);
     },
     sendDataAndWaitResponse: function (data, success, error) {
-        exec(success, error, "SerialPortPlugin", "sendDataAndWaitResponse", [data]);
+        exec(success, error, "SerialPortPlugin", "sendDataAndWaitResponse", [data, timeout]);
     },
     readSerialData: function (success, error) {
         exec(success, error, "SerialPortPlugin", "readSerialData", []);

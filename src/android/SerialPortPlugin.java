@@ -130,14 +130,20 @@ public class SerialPortPlugin extends CordovaPlugin {
         }
     }
 
-    private void sendDataAndWaitResponse(String message, CallbackContext callbackContext) {
+    private void sendDataAndWaitResponse(String message, int timeout, CallbackContext callbackContext) {
         if (message != null && message.length() > 0) {
             try {
                 byte[] byteArray =FormatUtil.hexString2Bytes(message);
                 outputStream.write(byteArray);
                 String data = readThread.getData();
                 int i = 0;
-                while(data == null && i < 50) { // 1s超时退出，否则会卡死
+                int maxI = 50;
+
+                if (int != null) {
+                    maxI = timeout / 20;
+                }
+
+                while(data == null && i < maxI) { // 1s超时退出，否则会卡死
                     try {
                         Thread.sleep(20);
                     } catch(Exception e) {
