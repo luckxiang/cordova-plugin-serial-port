@@ -3,22 +3,24 @@ var exec = require('cordova/exec');
 
 var SerialPort = {
 
-    openSerialPort: function (settings, success, error) {
-        exec(success, error, "SerialPortPlugin", "openSerialPort", [settings]);
+    openDevice: function (settings, success, error) {
+        exec(success, error, "SerialPortPlugin", "openDevice", [settings]);
     },
-    closeSerialPort: function (success, error) {
-        exec(success, error, "SerialPortPlugin", "closeSerialPort", []);
+    closeDevice: function (success, error) {
+        exec(success, error, "SerialPortPlugin", "closeDevice", []);
     },
-    writeSerialData: function (data, success, error) {
-        exec(success, error, "SerialPortPlugin", "writeSerialData", [data]);
+    read: function (success, error) {
+        exec(success, error, "SerialPortPlugin", "read", []);
     },
-    sendDataAndWaitResponse: function (data, success, error) {
-        exec(success, error, "SerialPortPlugin", "sendDataAndWaitResponse", [data]);
+    write: function (data, success, error) {
+        exec(success, error, "SerialPortPlugin", "write", [data]);
     },
-    readSerialData: function (success, error) {
-        exec(success, error, "SerialPortPlugin", "readSerialData", []);
+    sendDataAndWaitResponse: function (data, timeoutMs, success, error) {
+        exec(success, error, "SerialPortPlugin", "sendDataAndWaitResponse", [data, timeoutMs]);
+    },
+    setHex: function (isTrue) {
+        exec(null, null, "SerialPortPlugin", "setHex", [isTrue]);
     }
-
 };
 
 module.exports = SerialPort;

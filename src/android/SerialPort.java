@@ -79,7 +79,7 @@ public class SerialPort {
         try {
             System.loadLibrary("serial_port");
         } catch (Throwable e) {
-           Log.d("zzzzz","加载xx库异常 ："+e.toString());
+           Log.d("zzzzz","loading  lib.so fail ："+e.toString());
         }
 
     }

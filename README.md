@@ -2,296 +2,100 @@
 ionic3 基于cordova编写的安卓串口通信插件  ionic3 serial port plugins for android
 
 # support
- 1. read serial data
- 2. write serial data
- 3. write serial data and wait response 
+ 1. read string & hexString
+ 2. write string & hexStrinf
+ 3. write data and wait response 
+ 4. read is not block, you must check read data in you application.
+ 5. if you recive 2 or more message and do not read in time. you will get all in next read.
 
 # how to use
 1. add the plugins to your project 'ionic cordova plugins add ./cordova-plugin-serial-port'
-2. change the read protocol in ReadDataThread class
-3. then you can use HEX string to send or recive frame data.
+2. 'declare let cordova: any;'before use api. this way not  good. can anybody help me?
+3. enjoy
 
-# ts example: 
+# API
+
+#### openDevice
+param: 
+- config
+- success callback 
+- error callback
+
+config:
+- dev: serial port device node
+- baudrate: serial port baud rate
+- flags:  srdial port flags
+- isHex: if you want to use hexString you should set it to true.
+
+example:
 ```
-
-import { Injectable } from '@angular/core';
-import  { CRC } from './crc';
-
-enum COMMAND {
-    setSystemCfg = 0x01,
-    setWorkingCfg = 0x02,
-    setControl = 0x03,
-    setWeight = 0x04,
-    getSysData = 0x11,
-    getWorkingCfg = 0x12,
-    getControl = 0x13,
-    getWeight = 0x14,
-    getRealTimeData = 0x15
+cordova.plugins.SerialPortPlugin.openDevice([{dev:'/dev/ttyS0',baudrate:115200, flags:0, isHex:false}],
+    result=>alert(result),
+    error=>alert(error));
 }
+```
 
-enum CONTROL_ACTION {
-    start = 0x01,
-    pause = 0x02,
-    stop = 0x03,
-    unloading = 0x04,
-    calibration = 0x05,
-    netWeight = 0x06
-}
-
-
-declare let cordova: any;
-
-@Injectable()
-export class RunControl {
-  interval:any = null;
-  constructor() {
-    cordova.plugins.SerialPortPlugin.openSerialPort([{dev:'/dev/ttyS0',baudrate:115200, flags:0}],result=>alert(result),error=>alert(error));
-  }
-
-
-/** 数据格式
-帧头|命令 |长度  |帧内容|校验   |帧尾|
-0x68|UINT8|UINT16|N BYTE|异或CRC|0x16|
-**/
-  createFrame(com:COMMAND, data:number[], isUNIT16:boolean) {
-    let frame = '68';
-    frame += CRC.padLeft(com.toString(16), 2); //padLeft 补位函数，数据不够用0补位
-
-    let lenStr = ''
-    if(isUNIT16) {
-        lenStr = (data.length * 2).toString(16);
-    } else {
-        lenStr = data.length.toString(16);
-    }
-    lenStr = CRC.padLeft(lenStr, 4);
-    frame += lenStr;
-
-    data.forEach(function(value){
-        console.log(value);
-        if(value === null) {
-            value = 0;
-        }
-        let vaStr = parseInt(value.toString()).toString(16);
-        if(isUNIT16) {
-            vaStr = CRC.padLeft(vaStr, 4);
-          } else {
-            vaStr = CRC.padLeft(vaStr, 2);
-        }
-        frame += vaStr;
-    });
-
-    let crc = CRC.ToModbusCRC16(frame, true);
-    frame += crc;
-    frame += '16';
-    console.log(frame);
-
-    return frame;
-  }
-
-  sendFrame(com:COMMAND, data:number[], isUNIT16:boolean) {
-    let frame = this.createFrame(com, data, isUNIT16);
-    cordova.plugins.SerialPortPlugin.sendDataAndWaitResponse(frame,
-      res=> {
-            console.log(res);
-            if(res.length > 7 && (res.charAt(2) === '8' || res.charAt(2) === '9')) { //校验第三个字符是否是8或9，ack为命令字|0x80
-                console.log('ACK check 成功');
-            } else {
-                alert("系统异常,返回数据校验错误");
-            }
-      },
-      error=> {
-          alert(error);
-      });
-  }
-
-  getRealTimeData():any {
-    let that =this;
-    return  new Promise(function(resolve, reject){
-        let frame = that.createFrame(COMMAND.getRealTimeData, [], false);
-        cordova.plugins.SerialPortPlugin.sendDataAndWaitResponse(frame,
-          res=> {
-            console.log("实时数据：" + res);
-            if(res.length === 42 && res.charAt(2) === '9') { //校验第三个字符是否是9，ack为命令字|0x80
-                console.log('ACK check 成功');
-                resolve(that.parseFrame(res));
-            } else {
-                alert("系统异常,返回数据校验错误");
-            }
-         },
-         error=> {
-          alert(error);
-        });
-    });
-  }
-
-  start(s, w) {
-    this.sendFrame(COMMAND.setSystemCfg, [s.feedingDelayTime,s.unloadingDelayTime,s.startupDelayTime,s.comparisonTime,s.zeroPositionRange,s.zeroTrackingRange,
-    s.automaticUnloading? 1: 0,s.reversingTime,s.mixingTimes,s.turnTime,s.autodrop?1:0,s.dropWater,s.dropCement,s.dropAdditive1,s.dropAdditive2,s.range], true);
-
-    this.sendFrame(COMMAND.setWorkingCfg, [w.formulationUsed.water,w.formulationUsed.cement,w.formulationUsed.additive1,w.formulationUsed.additive2,w.repeat], true);
-
-    this.sendFrame(COMMAND.setControl, [CONTROL_ACTION.start], false);
-    console.log("开始");
-  }
-
-  readRealTimeData() {
-   return this.getRealTimeData();
-  }
-
-}
+#### closeDevice
+example:
+```
+cordova.plugins.SerialPortPlugin.closeDevice(
+    result=>alert(result),
+    error=>alert(error)
+);
 
 ```
-see more:[ionic3使用cordova创建安卓串口通信插件](http://bigxiangbaobao.com/blog/2018/07/25/ionic3%E4%BD%BF%E7%94%A8cordova%E5%88%9B%E5%BB%BA%E5%AE%89%E5%8D%93%E4%B8%B2%E5%8F%A3%E9%80%9A%E4%BF%A1%E6%8F%92%E4%BB%B6/)
 
-# appendix: crc code from internet
-crc.js
+#### read
+example:
+```
+cordova.plugins.SerialPortPlugin.read(
+  res=> {
+        console.log(res);
+        alert(res);
+  },
+  error=> {
+      alert(error);
+  });
+```
+
+#### write
+example:
+```
+cordova.plugins.SerialPortPlugin.write('12345678900000000000000000000000123',
+  res=> {
+        console.log(res);
+        alert(res);
+  },
+  error=> {
+      alert(error);
+  });
+```
+
+#### sendDataAndWaitResponse
+param: 
+- arg1: data
+- arg2: timoutMs
+
+example:
+```
+cordova.plugins.SerialPortPlugin.sendDataAndWaitResponse('12345678900000000000000000000000123',1000,
+  res=> {
+        console.log(res);
+        alert(res);
+  },
+  error=> {
+      alert(error);
+  });
 
 ```
-export var CRC = {};
 
-CRC._auchCRCHi = [
-    0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0,
-    0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41,
-    0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0,
-    0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40,
-    0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1,
-    0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41,
-    0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1,
-    0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41,
-    0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0,
-    0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40,
-    0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1,
-    0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40,
-    0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0,
-    0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40,
-    0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0,
-    0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40,
-    0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0,
-    0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41,
-    0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0,
-    0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41,
-    0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0,
-    0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40,
-    0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1,
-    0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41,
-    0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0,
-    0x80, 0x41, 0x00, 0xC1, 0x81, 0x40
-];
-CRC._auchCRCLo = [
-    0x00, 0xC0, 0xC1, 0x01, 0xC3, 0x03, 0x02, 0xC2, 0xC6, 0x06,
-    0x07, 0xC7, 0x05, 0xC5, 0xC4, 0x04, 0xCC, 0x0C, 0x0D, 0xCD,
-    0x0F, 0xCF, 0xCE, 0x0E, 0x0A, 0xCA, 0xCB, 0x0B, 0xC9, 0x09,
-    0x08, 0xC8, 0xD8, 0x18, 0x19, 0xD9, 0x1B, 0xDB, 0xDA, 0x1A,
-    0x1E, 0xDE, 0xDF, 0x1F, 0xDD, 0x1D, 0x1C, 0xDC, 0x14, 0xD4,
-    0xD5, 0x15, 0xD7, 0x17, 0x16, 0xD6, 0xD2, 0x12, 0x13, 0xD3,
-    0x11, 0xD1, 0xD0, 0x10, 0xF0, 0x30, 0x31, 0xF1, 0x33, 0xF3,
-    0xF2, 0x32, 0x36, 0xF6, 0xF7, 0x37, 0xF5, 0x35, 0x34, 0xF4,
-    0x3C, 0xFC, 0xFD, 0x3D, 0xFF, 0x3F, 0x3E, 0xFE, 0xFA, 0x3A,
-    0x3B, 0xFB, 0x39, 0xF9, 0xF8, 0x38, 0x28, 0xE8, 0xE9, 0x29,
-    0xEB, 0x2B, 0x2A, 0xEA, 0xEE, 0x2E, 0x2F, 0xEF, 0x2D, 0xED,
-    0xEC, 0x2C, 0xE4, 0x24, 0x25, 0xE5, 0x27, 0xE7, 0xE6, 0x26,
-    0x22, 0xE2, 0xE3, 0x23, 0xE1, 0x21, 0x20, 0xE0, 0xA0, 0x60,
-    0x61, 0xA1, 0x63, 0xA3, 0xA2, 0x62, 0x66, 0xA6, 0xA7, 0x67,
-    0xA5, 0x65, 0x64, 0xA4, 0x6C, 0xAC, 0xAD, 0x6D, 0xAF, 0x6F,
-    0x6E, 0xAE, 0xAA, 0x6A, 0x6B, 0xAB, 0x69, 0xA9, 0xA8, 0x68,
-    0x78, 0xB8, 0xB9, 0x79, 0xBB, 0x7B, 0x7A, 0xBA, 0xBE, 0x7E,
-    0x7F, 0xBF, 0x7D, 0xBD, 0xBC, 0x7C, 0xB4, 0x74, 0x75, 0xB5,
-    0x77, 0xB7, 0xB6, 0x76, 0x72, 0xB2, 0xB3, 0x73, 0xB1, 0x71,
-    0x70, 0xB0, 0x50, 0x90, 0x91, 0x51, 0x93, 0x53, 0x52, 0x92,
-    0x96, 0x56, 0x57, 0x97, 0x55, 0x95, 0x94, 0x54, 0x9C, 0x5C,
-    0x5D, 0x9D, 0x5F, 0x9F, 0x9E, 0x5E, 0x5A, 0x9A, 0x9B, 0x5B,
-    0x99, 0x59, 0x58, 0x98, 0x88, 0x48, 0x49, 0x89, 0x4B, 0x8B,
-    0x8A, 0x4A, 0x4E, 0x8E, 0x8F, 0x4F, 0x8D, 0x4D, 0x4C, 0x8C,
-    0x44, 0x84, 0x85, 0x45, 0x87, 0x47, 0x46, 0x86, 0x82, 0x42,
-    0x43, 0x83, 0x41, 0x81, 0x80, 0x40
-];
+#### setHex
+you can change the hexString | string  after openDevice
 
-CRC.CRC16 = function (buffer) {
-    var hi = 0xff;
-    var lo = 0xff;
-    for (var i = 0; i < buffer.length; i++) {
-        var idx = hi ^ buffer[i];
-        hi = (lo ^ CRC._auchCRCHi[idx]);
-        lo = CRC._auchCRCLo[idx];
-    }
-    return CRC.padLeft((lo << 8 | hi).toString(16).toUpperCase(), 4, '0');
-};
-
-CRC.isArray = function (arr) {
-    return Object.prototype.toString.call(arr) === '[object Array]';
-};
-
-CRC.ToCRC16 = function (str) {
-    return CRC.CRC16(CRC.isArray(str) ? str : CRC.strToByte(str));
-};
-
-CRC.ToModbusCRC16 = function (str) {
-    return CRC.CRC16(CRC.isArray(str) ? str : CRC.strToHex(str));
-};
-
-CRC.strToByte = function (str) {
-    var tmp = str.split(''), arr = [];
-    for (var i = 0, c = tmp.length; i < c; i++) {
-        var j = encodeURI(tmp[i]);
-        if (j.length == 1) {
-            arr.push(j.charCodeAt());
-        } else {
-            var b = j.split('%');
-            for (var m = 1; m < b.length; m++) {
-                arr.push(parseInt('0x' + b[m]));
-            }
-        }
-    }
-    return arr;
-};
-
-CRC.convertChinese = function (str) {
-    var tmp = str.split(''), arr = [];
-    for (var i = 0, c = tmp.length; i < c; i++) {
-        var s = tmp[i].charCodeAt();
-        if (s <= 0 || s >= 127) {
-            arr.push(s.toString(16));
-        }
-        else {
-            arr.push(tmp[i]);
-        }
-    }
-    return arr;
-};
-
-CRC.filterChinese = function (str) {
-    var tmp = str.split(''), arr = [];
-    for (var i = 0, c = tmp.length; i < c; i++) {
-        var s = tmp[i].charCodeAt();
-        if (s > 0 && s < 127) {
-            arr.push(tmp[i]);
-        }
-    }
-    return arr;
-};
-
-CRC.strToHex = function (hex, isFilterChinese) {
-    hex = isFilterChinese ? CRC.filterChinese(hex).join('') : CRC.convertChinese(hex).join('');
-
-    //清除所有空格
-    hex = hex.replace(/\s/g, "");
-    //若字符个数为奇数，补一个空格
-    hex += hex.length % 2 != 0 ? " " : "";
-
-    var c = hex.length / 2, arr = [];
-    for (var i = 0; i < c; i++) {
-        arr.push(parseInt(hex.substr(i * 2, 2), 16));
-    }
-    return arr;
-};
-
-CRC.padLeft = function (s, w, pc) {
-    if (pc == undefined) {
-        pc = '0';
-    }
-    for (var i = 0, c = w - s.length; i < c; i++) {
-        s = pc + s;
-    }
-    return s;
-};
+example:
 ```
+cordova.plugins.SerialPortPlugin.setHex(true);
+```
+
+
+
