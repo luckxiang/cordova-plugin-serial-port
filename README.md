@@ -3,10 +3,11 @@ ionic3 基于cordova编写的安卓串口通信插件  ionic3 serial port plugin
 
 # support
  1. read string & hexString
- 2. write string & hexStrinf
+ 2. write string & hexString
  3. write data and wait response 
  4. read is not block, you must check read data in you application. include response data.
  5. if you recive 2 or more message and do not read in time. you will get all in next read.
+ 6. UART device does not check data is complete & right. you should have a protocol for exchanging data between two devices.
 
 # how to use
 1. add the plugins to your project 'ionic cordova plugins add ./cordova-plugin-serial-port'
